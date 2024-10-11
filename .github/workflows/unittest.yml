@@ -5,6 +5,8 @@ on:
     paths:
       - "**.py"
       - "pyproject.toml"
+    branches:
+      - "*"
 
 jobs:
   Code-Check:
@@ -22,6 +24,11 @@ jobs:
         ruff check
         ruff format --check
   Code-Test:
+    env:
+      FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+      FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+      FEISHU_PHONE: ${{ secrets.FEISHU_PHONE }}
+
     runs-on: ubuntu-latest
     if: contains(github.server_url, 'github.com')
     steps:

@@ -16,9 +16,11 @@ classifiers = [
     'Topic :: Software Development :: Libraries',
     'Topic :: Utilities',
 ]
-
 dynamic = ['version']
-dependencies = ['requests']
+dependencies = [
+    'httpx',
+    'pydantic',
+]
 
 [[project.authors]]
 name = 'Dragon-GCS'
@@ -26,6 +28,7 @@ email = '878173121@qq.com'
 
 [project.optional-dependencies]
 dev = []
+pandas = ['pandas']
 [tool.setuptools.dynamic.version]
 attr = 'feishu.__version__'
 

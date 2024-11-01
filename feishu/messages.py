@@ -10,7 +10,7 @@ import os
 from io import BufferedReader
 from typing import Literal, TypeAlias
 
-from feishu import contact
+from feishu.contact import Contact
 
 try:
     import cv2  # type: ignore
@@ -20,18 +20,6 @@ except ImportError:
 
 from feishu.client import BaseClient
 
-TENANT_TOKEN_API = "/auth/v3/tenant_access_token/internal"
-MESSAGE_API = "/im/v1/messages"
-UPLOAD_IMAGE_API = "/im/v1/images"
-UPLOAD_FILE_API = "/im/v1/files"
-
-# if open_id is not set, use phone or email to query open_id, prefer to use phone
-FEISHU_PHONE = os.getenv("FEISHU_PHONE", "")
-FEISHU_EMAIL = os.getenv("FEISHU_EMAIL", "")
-# open_id of user who will receive the message
-FEISHU_OPEN_ID = os.getenv("FEISHU_OPEN_ID")
-
-
 FileStream: TypeAlias = BufferedReader | bytes | bytearray
 File: TypeAlias = str | FileStream
 FileType: TypeAlias = Literal["opus", "mp4", "pdf", "doc", "xls", "ppt", "stream"]
@@ -39,31 +27,21 @@ MsgType: TypeAlias = Literal["text", "image", "audio", "media", "file", "interac
 
 
 class FeiShuBot(BaseClient):
-    """Send message to feishu user or chat.
-    When user_id and chat_id are not set, bot will use FEISHU_OPEN_ID to send message.
-    If FEISHU_OPEN_ID is not set, bot will use FEISHU_PHONE or FEISHU_EMAIL to query open_id as user_id.
-    When user_id and chat_id are set, user_id will be used as at user in message.
+    """发送消息给指定用户或聊天群组。
+    当 user_id 和 chat_id 未设置时，机器人将使用Contact().default_open_id作为默认收件人。
+    当 user_id 和 chat_id 都设置时，将会在群消息中@指定用户。
 
     Args:
-        user_id(str): open_id of the user who will receive the message
-        chat_id(str): chat_id of the chat where the message will be sent
+        user_id (str): 将接收消息的用户的 open_id
+        chat_id (str): 将发送消息的聊天的 chat_id
     """
 
-    def __init__(self, user_id: str = "", chat_id: str = ""):
-        self.receive_id = user_id or chat_id or FEISHU_OPEN_ID
-        if not self.receive_id:
-            if not (FEISHU_PHONE or FEISHU_EMAIL):
-                raise ValueError(
-                    "To query open_id when FEISHU_OPEN_ID isn't set, FEISHU_PHONE "
-                    "or FEISHU_EMAIL must be set with your phone or email."
-                )
-            users = contact.get_open_id(FEISHU_PHONE, FEISHU_EMAIL)
-            self.receive_id = users.get(FEISHU_PHONE) or users.get(FEISHU_EMAIL)
+    api = {"message": "/im/v1/messages", "images": "/im/v1/images", "files": "/im/v1/files"}
 
-            if not self.receive_id:
-                raise ValueError(
-                    f"User not found with phone {FEISHU_PHONE} or email {FEISHU_EMAIL}"
-                )
+    def __init__(self, user_id: str = "", chat_id: str = ""):
+        self.receive_id = user_id or chat_id
+        if not self.receive_id:
+            self.receive_id = Contact().default_open_id
 
         if self.receive_id.startswith("ou_"):
             self.receive_id_type = "open_id"
@@ -80,7 +58,7 @@ class FeiShuBot(BaseClient):
         content: dict,
     ) -> dict:
         return self.post(
-            MESSAGE_API,
+            self.api["message"],
             params={"receive_id_type": self.receive_id_type},
             json={
                 "receive_id": self.receive_id,
@@ -96,11 +74,11 @@ class FeiShuBot(BaseClient):
             filename = os.path.basename(file.name) if isinstance(file, BufferedReader) else "file"
 
         if file_type == "image":
-            url = UPLOAD_IMAGE_API
+            url = self.api["images"]
             data = {"image_type": "message"}
             files = {"image": (filename, file)}
         else:
-            url = UPLOAD_FILE_API
+            url = self.api["files"]
             data = {"file_type": file_type, "file_name": filename}
             files = {"file": (filename, file)}
         return self.post(url, data=data, files=files)["data"]

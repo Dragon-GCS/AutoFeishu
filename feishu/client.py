@@ -46,6 +46,7 @@ class BaseClient:
     base_url = "https://open.feishu.cn/open-apis"
     token = TenantToken()  # Shared token for all instances
     _client = httpx.Client()  # Shared client for all instances
+    api: dict[str, str]
 
     def _request(self, method: str, api: str, **kwargs) -> dict:
         url = f"{self.base_url}{api}"

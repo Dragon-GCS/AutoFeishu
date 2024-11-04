@@ -84,7 +84,7 @@ class TestApproval(TestCase):
         open_id = Contact().default_open_id
         # 提交任务
         task_param = {
-            "code_id": APPROVAL_CODE,
+            "approval_code": APPROVAL_CODE,
             "open_id": open_id,
             "form": [
                 {"id": "widget17304709164440001", "type": "input", "value": "11111"},
@@ -98,12 +98,12 @@ class TestApproval(TestCase):
             "approvers": [{"270179659ee85e4d188ebd5f16088a77": [open_id]}],
         }
         approval = Approval.create(**task_param)
-        self.assertEqual(approval.code_id, APPROVAL_CODE)
+        self.assertEqual(approval.approval_code, APPROVAL_CODE)
 
         # 任务详情
         detail = approval.detail(open_id)
         self.assertEqual(detail.approval_code, APPROVAL_CODE)
-        self.assertEqual(detail.instance_code, approval.instance_id)
+        self.assertEqual(detail.instance_code, approval.instance_code)
         self.assertEqual(detail.status, "PENDING")
         # 审批任务
         with self.subTest(test="审批通过"):
@@ -120,7 +120,7 @@ class TestApproval(TestCase):
             self.assertEqual(detail.status, "REJECTED")
 
     def test_approval_instances(self):
-        approvals = Approval.get_instances(
+        approvals = Approval.list_instances(
             APPROVAL_CODE, start_time=datetime(2024, 11, 1), end_time=datetime(2024, 11, 30)
         )
-        self.assertTrue(all(ins.code_id == APPROVAL_CODE for ins in approvals))
+        self.assertTrue(all(ins.approval_code == APPROVAL_CODE for ins in approvals))

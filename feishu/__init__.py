@@ -4,7 +4,8 @@ __version__ = "0.0.1"
 
 from .approval import Approval
 from .client import BaseClient
+from .contact import Contact
 from .messages import FeiShuBot
 from .spread_sheet import Sheet, SpreadSheet
 
-__all__ = ["Approval", "BaseClient", "FeiShuBot", "Sheet", "SpreadSheet"]
+__all__ = ["Approval", "BaseClient", "Contact", "FeiShuBot", "Sheet", "SpreadSheet"]

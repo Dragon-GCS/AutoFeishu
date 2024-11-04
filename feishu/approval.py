@@ -14,14 +14,14 @@ class Approval(BaseClient):
         "reject_task": "/approval/v4/tasks/reject",
     }
 
-    def __init__(self, code_id: str, instance_id: str):
-        self.code_id = code_id
-        self.instance_id = instance_id
+    def __init__(self, approval_code: str, instance_code: str):
+        self.approval_code = approval_code
+        self.instance_code = instance_code
 
     @classmethod
     def create(
         cls,
-        code_id: str,
+        approval_code: str,
         open_id: str,
         form: list[dict],
         department_id: Optional[str] = None,
@@ -36,11 +36,11 @@ class Approval(BaseClient):
         title_display_method: int = 0,
         auto_approvals: list[dict[Literal["CUSTOM", "NON_CUSTOM"], str]] = [],
     ) -> "Approval":
-        """创建审批实例
+        """创建审批实例 https://open.feishu.cn/document/server-docs/approval-v4/instance/create
 
         Args:
-            code_id (str): 审批定义的唯一标识
-            open_id (str): 发起审批用户的`open_id`，与`user_id` 必须传入其中一个。如果传入了`user_id`则优先使用`user_id`。
+            approval_code (str): 审批定义的唯一标识
+            open_id (str): 发起审批用户的`open_id`。
             department_id (str): 发起审批用户部门id，如果用户只属于一个部门，可以不填。如果属于多个部门，默认会选择部门列表第一个部门。
             approvers (list[dict[str, str]]):
                 如果有发起人自选节点，则需要填写对应节点的审批人。key为节点id，value为审批人open_id列表。
@@ -63,7 +63,7 @@ class Approval(BaseClient):
             auto_approvals (list[dict[str, str]]): 自动通过节点。Key为节点类型(CUSTOM|NON_CUSTOM)，value为节点id。
         """
         body: dict[str, Union[str, int, list]] = {
-            "approval_code": code_id,
+            "approval_code": approval_code,
             "open_id": open_id,
             "form": json.dumps(form),
             "title_display_method": title_display_method,
@@ -98,22 +98,22 @@ class Approval(BaseClient):
             ]
 
         res = BaseClient().post(cls.api["instance"], json=body)
-        instance_id = res["data"]["instance_code"]
-        return cls(code_id, instance_id)
+        instance_code = res["data"]["instance_code"]
+        return cls(approval_code, instance_code)
 
     @classmethod
-    def get_instances(
+    def list_instances(
         cls,
-        code_id: str,
+        approval_code: str,
         start_time: Union[int, datetime],
         end_time: Union[int, datetime],
         num: int = 0,
         page_size: int = 100,
     ):
-        """批量查询审批实例
+        """批量查询审批实例 https://open.feishu.cn/document/server-docs/approval-v4/instance/list
 
         Args:
-            code_id (str): 审批定义的唯一标识
+            approval_code (str): 审批定义的唯一标识
             start_time (Union[int, datetime]): 开始时间, 整数毫秒或者 datetime 对象
             end_time (Union[int, datetime]): 结束时间, 整数毫秒或者 datetime 对象
             num (int, optional): 查询数量。 默认为 0, 表示查询全部.
@@ -125,18 +125,18 @@ class Approval(BaseClient):
             end_time = int(end_time.timestamp() * 1000)
         params = {
             "page_size": min(page_size, 100),
-            "approval_code": code_id,
+            "approval_code": approval_code,
             "start_time": start_time,
             "end_time": end_time,
         }
         _client = BaseClient()
         data = _client.get(cls.api["instance"], params=params)["data"]
-        instance = [cls(code_id, code) for code in data["instance_code_list"]]
+        instance = [cls(approval_code, code) for code in data["instance_code_list"]]
 
         while (not num or len(instance) < num) and data["has_more"]:
             params["page_token"] = data["page_token"]
             data = _client.get(cls.api["instance"], params=params)["data"]
-            instance.extend([cls(code_id, code) for code in data["instance_code_list"]])
+            instance.extend([cls(approval_code, code) for code in data["instance_code_list"]])
 
         if num:
             instance = instance[:num]
@@ -144,23 +144,24 @@ class Approval(BaseClient):
 
     @classmethod
     def get_define(cls, approval_code: str) -> ApprovalDefine:
+        """获取审批定义详情 https://open.feishu.cn/document/server-docs/approval-v4/approval/get"""
         res = BaseClient().get(f"{cls.api['approval']}/{approval_code}")
         return ApprovalDefine(**res["data"])
 
-    def detail(self, open_id: str):
-        """获取审批实例详情
+    def detail(self, open_id: str = ""):
+        """获取审批实例详情 https://open.feishu.cn/document/server-docs/approval-v4/instance/get
 
         Args:
-            open_id (str): 发起审批的用户id
+            open_id (str): 可选，发起审批的用户id
         """
         res = self.get(
-            f"{self.api['instance']}/{self.instance_id}",
+            f"{self.api['instance']}/{self.instance_code}",
             params={"user_id": open_id, "user_id_type": "open_id"},
         )
         return ApprovalDetail(**res["data"])
 
     def approve(self, open_id: str, task_id: str, comment: str = "", form: Optional[dict] = None):
-        """同意审批任务
+        """同意审批任务 https://open.feishu.cn/document/server-docs/approval-v4/task/approve
 
         Args:
             open_id (str): 审批人的`open_id`
@@ -171,8 +172,8 @@ class Approval(BaseClient):
         self.post(
             self.api["approve_task"],
             json={
-                "approval_code": self.code_id,
-                "instance_code": self.instance_id,
+                "approval_code": self.approval_code,
+                "instance_code": self.instance_code,
                 "user_id": open_id,
                 "task_id": task_id,
                 "comment": comment,
@@ -181,7 +182,7 @@ class Approval(BaseClient):
         )
 
     def reject(self, open_id: str, task_id: str, comment: str = "", form: Optional[dict] = None):
-        """拒绝审批任务
+        """拒绝审批任务 https://open.feishu.cn/document/server-docs/approval-v4/task/reject
 
         Args:
             open_id (str): 审批人的`open_id`
@@ -192,8 +193,8 @@ class Approval(BaseClient):
         self.post(
             self.api["reject_task"],
             json={
-                "approval_code": self.code_id,
-                "instance_code": self.instance_id,
+                "approval_code": self.approval_code,
+                "instance_code": self.instance_code,
                 "user_id": open_id,
                 "task_id": task_id,
                 "comment": comment,

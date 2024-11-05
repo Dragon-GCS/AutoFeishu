@@ -95,7 +95,7 @@ class TestApproval(TestCase):
                     "value": "11111",
                 },
             ],
-            "approvers": [{"270179659ee85e4d188ebd5f16088a77": [open_id]}],
+            "approvers": {"270179659ee85e4d188ebd5f16088a77": [open_id]},
         }
         approval = Approval.create(**task_param)
         self.assertEqual(approval.approval_code, APPROVAL_CODE)

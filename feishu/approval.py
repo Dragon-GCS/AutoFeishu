@@ -25,8 +25,8 @@ class Approval(BaseClient):
         open_id: str,
         form: list[dict],
         department_id: Optional[str] = None,
-        approvers: list[dict[str, list[str]]] = [],
-        cc_list: list[dict[str, list[str]]] = [],
+        approvers: dict[str, list[str]] = {},
+        cc_list: dict[str, list[str]] = {},
         uuid: Optional[str] = None,
         allow_resubmit: Optional[bool] = None,
         allow_submit_again: Optional[bool] = None,
@@ -42,9 +42,9 @@ class Approval(BaseClient):
             approval_code (str): 审批定义的唯一标识
             open_id (str): 发起审批用户的`open_id`。
             department_id (str): 发起审批用户部门id，如果用户只属于一个部门，可以不填。如果属于多个部门，默认会选择部门列表第一个部门。
-            approvers (list[dict[str, str]]):
+            approvers (dict[str, str]):
                 如果有发起人自选节点，则需要填写对应节点的审批人。key为节点id，value为审批人open_id列表。
-            cc_list (list[dict[str, str]]):
+            cc_list (dict[str, str]):
                 如果有发起人自选节点，则可填写对应节点的抄送人。key为节点id，value为抄送人open_id列表。
             uuid (str):  审批实例 uuid，用于幂等操作, 每个租户下面的唯一key，同一个 uuid 只能用于创建一个审批实例，
                 如果冲突，返回错误码 60012 ，格式建议为 XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX，不区分大小写。
@@ -72,12 +72,10 @@ class Approval(BaseClient):
             body["department_id"] = department_id
         if approvers:
             body["node_approver_open_id_list"] = [
-                {"key": k, "value": v} for approver in approvers for k, v in approver.items()
+                {"key": k, "value": v} for k, v in approvers.items()
             ]
         if cc_list:
-            body["node_cc_open_id_list"] = [
-                {"key": k, "value": v} for cc in cc_list for k, v in cc.items()
-            ]
+            body["node_cc_open_id_list"] = [{"key": k, "value": v} for k, v in cc_list.items()]
         if uuid is not None:
             body["uuid"] = uuid
         if allow_resubmit is not None:

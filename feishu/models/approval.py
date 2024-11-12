@@ -55,12 +55,14 @@ class ApprovalDefine(BaseModel):
 
 
 class ApprovalTask(BaseModel):
-    end_time: datetime
     id: str
     node_id: str
     node_name: str
-    open_id: str
+    custom_node_id: str = ""
     start_time: datetime
+    end_time: datetime
+    open_id: str = ""
+    user_id: str = ""
     # 任务状态: 待审批, 已审批, 已拒绝, 已转交, 已完成
     status: Literal["PENDING", "APPROVED", "REJECTED", "TRANSFERRED", "DONE"]
     # 审批方式: 会签，或签，自动通过，自动拒绝，按顺序
@@ -72,6 +74,12 @@ class ApprovalAttachment(BaseModel):
     file_size: int
     title: str
     type: str
+
+
+class ApprovalDetailCCUser(BaseModel):
+    user_id: str = ""
+    cc_id: str
+    open_id: str = ""
 
 
 class ApprovalTimeline(BaseModel):
@@ -102,14 +110,17 @@ class ApprovalTimeline(BaseModel):
         "CC",
     ]
     user_id_list: Annotated[list[str], JsonConvert] = []
-    cc_user_list: Annotated[list[str], JsonConvert] = []
+    open_id_list: Annotated[list[str], JsonConvert] = []
+    cc_user_list: list[ApprovalDetailCCUser] = []
     files: list[ApprovalAttachment] = []
 
 
-class ApprovalDetailCCUser(BaseModel):
-    user_id: str = ""
-    cc_id: str
-    open_id: str = ""
+class ApprovalComment(BaseModel):
+    id: str  # 评论id
+    user_id: str
+    open_id: str
+    comment: str
+    create_time: datetime
 
 
 class ApprovalDetail(BaseModel):
@@ -120,13 +131,15 @@ class ApprovalDetail(BaseModel):
     department_id: str
     end_time: datetime
     form: Annotated[list[dict], JsonConvert]
+    modified_instance_code: str = ""  # 修改的原实例 code,仅在查询修改实例时显示该字段
+    reverted_instance_code: str = ""  # 撤销的原实例 code,仅在查询撤销实例时显示该字段
     instance_code: str
     reverted: bool
     serial_number: str  # 审批编号
     start_time: datetime
     # 审批状态: 审批中, 通过, 拒绝, 撤回, 删除
     status: Literal["PENDING", "APPROVED", "REJECTED", "CANCELED", "DELETED"]
-    cc_user_list: list[ApprovalDetailCCUser] = []
+    comment_list: list[ApprovalComment] = []
     task_list: list[ApprovalTask] = []
     timeline: list[ApprovalTimeline] = []
     open_id: str = ""

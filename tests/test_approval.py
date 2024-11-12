@@ -96,6 +96,7 @@ class TestApproval(TestCase):
                 },
             ],
             "approvers": {"270179659ee85e4d188ebd5f16088a77": [open_id]},
+            "cc_list": {"270179659ee85e4d188ebd5f16088a77": [open_id]},
         }
         approval = Approval.create(**task_param)
         self.assertEqual(approval.approval_code, APPROVAL_CODE)
@@ -104,6 +105,8 @@ class TestApproval(TestCase):
         detail = approval.detail(open_id)
         self.assertEqual(detail.approval_code, APPROVAL_CODE)
         self.assertEqual(detail.instance_code, approval.instance_code)
+        self.assertEqual(detail.task_list[0].open_id, open_id)
+        self.assertEqual(detail.timeline[0].open_id, open_id)
         self.assertEqual(detail.status, "PENDING")
         # 审批任务
         with self.subTest(test="审批通过"):

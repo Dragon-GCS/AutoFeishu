@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from unittest import TestCase
 
@@ -112,6 +113,7 @@ class TestApproval(TestCase):
         with self.subTest(test="审批通过"):
             task_id = detail.task_list[0].id
             approval.approve(open_id, task_id=task_id, comment="同意")
+            time.sleep(3)
             detail = approval.detail(open_id)
             self.assertEqual(detail.status, "APPROVED")
         with self.subTest(test="审批拒绝"):
@@ -119,6 +121,7 @@ class TestApproval(TestCase):
             detail = approval.detail(open_id)
             task_id = detail.task_list[0].id
             approval.reject(open_id, task_id=task_id, comment="拒绝")
+            time.sleep(3)
             detail = approval.detail(open_id)
             self.assertEqual(detail.status, "REJECTED")
 

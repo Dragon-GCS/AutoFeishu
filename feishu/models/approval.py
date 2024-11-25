@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import json
 from datetime import datetime
-from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, BeforeValidator
+from typing_extensions import Annotated, Literal, Optional
 
 JsonConvert = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s)
 

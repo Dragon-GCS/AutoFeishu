@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
-from typing import Literal, Optional, Union
+
+from typing_extensions import Literal, Optional, Union
 
 from feishu.client import BaseClient
 from feishu.models.approval import ApprovalDefine, ApprovalDetail

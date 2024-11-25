@@ -4,11 +4,11 @@
 # Edit with VS Code
 # Filename: messages.py
 # Description: Feishu bot to send message to user
-
 import json
 import os
 from io import BufferedReader
-from typing import Literal, TypeAlias
+
+from typing_extensions import Literal, TypeAlias
 
 from feishu.contact import Contact
 
@@ -124,12 +124,12 @@ class FeiShuBot(BaseClient):
 
         return self._send_message("audio", self._post_file("opus", audio))
 
-    def send_media(self, media: FileStream, cover: FileStream | bytes = b"") -> dict:
+    def send_media(self, media: FileStream, cover: FileStream = b"") -> dict:
         """Send media message, media must be mp4 format.
 
         Args:
             media(FileStream): media to be sent, must be opened in binary mode
-            cover(FileStream | bytes): cover for media, default is first frame of media
+            cover(FileStream): cover for media, default is first frame of media
             filename(str): filename of the audio, default is empty
         """
         if cv2 is None:
@@ -140,7 +140,8 @@ class FeiShuBot(BaseClient):
             _, frame = cv2.VideoCapture(media.name).read()
             _, _cover = cv2.imencode(".jpg", frame)
             cover = _cover.tobytes()
-        content = self._post_file("mp4", media) | self._post_file("image", cover)
+        content = self._post_file("mp4", media)
+        content.update(self._post_file("image", cover))
         return self._send_message("media", content)
 
     def send_card(self, message: str, header: str = "") -> dict:

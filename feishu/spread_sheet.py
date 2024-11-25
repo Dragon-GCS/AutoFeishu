@@ -3,9 +3,6 @@
 # Created at 2024/10/10 17:12
 # Edit with VS Code
 # Filename: spread_sheet.py
-
-from __future__ import annotations
-
 from pydantic import BaseModel
 
 from feishu.client import BaseClient
@@ -35,7 +32,7 @@ class SpreadSheet(BaseClient):
         data = super()._request(method, api, **kwargs)
         return data["data"]
 
-    def list_sheets(self) -> list[Sheet]:
+    def list_sheets(self) -> list["Sheet"]:
         """List all sheets in the spreadsheet
 
         Returns:
@@ -48,7 +45,7 @@ class SpreadSheet(BaseClient):
             for sheet in data["sheets"]
         ]
 
-    def get_sheet(self, sheet_id_or_title: str) -> Sheet:
+    def get_sheet(self, sheet_id_or_title: str) -> "Sheet":
         """Get sheet by sheet_id or title
 
         Args:

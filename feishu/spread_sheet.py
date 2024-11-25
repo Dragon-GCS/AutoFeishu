@@ -3,6 +3,7 @@
 # Created at 2024/10/10 17:12
 # Edit with VS Code
 # Filename: spread_sheet.py
+from typing import Union
 from pydantic import BaseModel
 
 from feishu.client import BaseClient
@@ -99,7 +100,7 @@ class Sheet:
         title(str): The title of the sheet, default is ""
     """
 
-    def __init__(self, owner: SpreadSheet | str, sheet_id: str, title: str = ""):
+    def __init__(self, owner: Union[SpreadSheet, str], sheet_id: str, title: str = ""):
         self.owner = owner if isinstance(owner, SpreadSheet) else SpreadSheet(owner)
         self.sheet_id = sheet_id
         self.title = title

@@ -8,7 +8,7 @@ import json
 import os
 from io import BufferedReader
 
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import Literal, TypeAlias, Union
 
 from feishu.contact import Contact
 
@@ -20,8 +20,8 @@ except ImportError:
 
 from feishu.client import BaseClient
 
-FileStream: TypeAlias = BufferedReader | bytes | bytearray
-File: TypeAlias = str | FileStream
+FileStream: TypeAlias = Union[BufferedReader, bytes, bytearray]
+File: TypeAlias = Union[str, FileStream]
 FileType: TypeAlias = Literal["opus", "mp4", "pdf", "doc", "xls", "ppt", "stream"]
 MsgType: TypeAlias = Literal["text", "image", "audio", "media", "file", "interactive"]
 
@@ -68,7 +68,7 @@ class FeiShuBot(BaseClient):
         )
 
     def _post_file(
-        self, file_type: Literal["image"] | FileType, file: File, filename: str = ""
+        self, file_type: Union[Literal["image"], FileType], file: File, filename: str = ""
     ) -> dict:
         if not filename:
             filename = os.path.basename(file.name) if isinstance(file, BufferedReader) else "file"

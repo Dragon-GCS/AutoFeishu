@@ -4,6 +4,7 @@
 # Edit with VS Code
 # Filename: spread_sheet.py
 from typing import Union
+
 from pydantic import BaseModel
 
 from feishu.client import BaseClient

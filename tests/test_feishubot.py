@@ -3,7 +3,7 @@ import unittest
 
 import httpx
 
-from feishu.messages import FeiShuBot
+from feishu import FeiShuBot
 
 
 class TestFeishu(unittest.TestCase):

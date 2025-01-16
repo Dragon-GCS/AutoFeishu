@@ -3,7 +3,8 @@ name: Code Check And Test
 on:
   push:
     paths:
-      - "**.py"
+      - "feishu/**.py"
+      - "tests/**.py"
       - "pyproject.toml"
     branches:
       - "*"

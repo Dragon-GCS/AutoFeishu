@@ -2,8 +2,7 @@ import time
 from datetime import datetime
 from unittest import TestCase
 
-from feishu import Approval
-from feishu.contact import Contact
+from feishu import Approval, Contact
 from feishu.models.approval import ApprovalDefine
 
 # 测试用审批流

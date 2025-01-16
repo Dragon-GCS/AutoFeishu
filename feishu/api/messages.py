@@ -10,7 +10,7 @@ from io import BufferedReader
 
 from typing_extensions import Literal, TypeAlias, Union
 
-from feishu.contact import Contact
+from feishu.api.contact import Contact
 
 try:
     import cv2  # type: ignore

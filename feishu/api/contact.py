@@ -1,8 +1,8 @@
-import os
 from functools import cached_property
 from typing import Union
 
 from feishu.client import BaseClient
+from feishu.config import config
 
 
 class Contact(BaseClient):
@@ -19,21 +19,19 @@ class Contact(BaseClient):
     def default_open_id(self) -> str:
         """通过环境变量获取默认的 open_id。如果设置了`FEISHU_OPEN_ID`，则返回该值。否则，使用`FEISHU_PHONE`或`FEISHU_EMAIL`查询。"""
 
-        if open_id := os.getenv("FEISHU_OPEN_ID", ""):
-            return open_id
-        phone = os.getenv("FEISHU_PHONE", "")
-        email = os.getenv("FEISHU_EMAIL", "")
+        if config.open_id:
+            return config.open_id
 
-        if not (phone or email):
+        if not config.phone and not config.email:
             raise ValueError(
                 "To query open_id when FEISHU_OPEN_ID isn't set, FEISHU_PHONE "
                 "or FEISHU_EMAIL must be set with your phone or email."
             )
-        users = self.get_open_id(phone, email)
-        open_id = users.get(phone) or users.get(email)
+        users = self.get_open_id(config.phone, config.email)
+        open_id = users.get(config.phone) or users.get(config.email)
 
         if not open_id:
-            raise ValueError(f"User not found with phone {phone} or email {email}")
+            raise ValueError(f"User not found with phone {config.phone} or email {config.email}")
         return open_id
 
     def get_open_id(

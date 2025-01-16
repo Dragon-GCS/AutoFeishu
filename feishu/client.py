@@ -1,14 +1,10 @@
 import json
-import os
 from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
 
-FEISHU_APP_ID = os.getenv("FEISHU_APP_ID")
-FEISHU_APP_SECRET = os.getenv("FEISHU_APP_SECRET")
-
-assert FEISHU_APP_ID and FEISHU_APP_SECRET, "Please set FEISHU_APP_ID and FEISHU_APP_SECRET env"
+from feishu.config import config
 
 
 class TenantToken:
@@ -22,9 +18,10 @@ class TenantToken:
         if self.token and self.expire_at > datetime.now():
             return self.token
 
+        assert config.app_id and config.app_secret, "Please set APP_ID and APP_SECRET"
         response = instance._client.post(
             url=instance.base_url + "/auth/v3/tenant_access_token/internal",
-            json={"app_id": FEISHU_APP_ID, "app_secret": FEISHU_APP_SECRET},
+            json={"app_id": config.app_id, "app_secret": config.app_secret},
         )
         response.raise_for_status()
         data = response.json()
@@ -41,7 +38,7 @@ class TenantToken:
 
 
 class BaseClient:
-    base_url = "https://open.feishu.cn/open-apis"
+    base_url = config.base_url
     token = TenantToken()  # Shared token for all instances
     _client = httpx.Client()  # Shared client for all instances
     api: dict[str, str]

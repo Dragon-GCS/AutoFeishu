@@ -3,11 +3,11 @@ from datetime import datetime
 
 from typing_extensions import Literal, Optional, Union
 
-from feishu.client import BaseClient
+from feishu.client import AuthClient
 from feishu.models.approval import ApprovalDefine, ApprovalDetail
 
 
-class Approval(BaseClient):
+class Approval(AuthClient):
     api = {
         "instance": "/approval/v4/instances",
         "approval": "/approval/v4/approvals",
@@ -96,7 +96,7 @@ class Approval(BaseClient):
                 for k, v in auto_approval.items()
             ]
 
-        res = BaseClient().post(cls.api["instance"], json=body)
+        res = cls.post(cls.api["instance"], json=body)
         instance_code = res["data"]["instance_code"]
         return cls(approval_code, instance_code)
 
@@ -128,13 +128,12 @@ class Approval(BaseClient):
             "start_time": start_time,
             "end_time": end_time,
         }
-        _client = BaseClient()
-        data = _client.get(cls.api["instance"], params=params)["data"]
+        data = cls.get(cls.api["instance"], params=params)["data"]
         instance = [cls(approval_code, code) for code in data["instance_code_list"]]
 
         while (not num or len(instance) < num) and data["has_more"]:
             params["page_token"] = data["page_token"]
-            data = _client.get(cls.api["instance"], params=params)["data"]
+            data = cls.get(cls.api["instance"], params=params)["data"]
             instance.extend([cls(approval_code, code) for code in data["instance_code_list"]])
 
         if num:
@@ -144,7 +143,7 @@ class Approval(BaseClient):
     @classmethod
     def get_define(cls, approval_code: str) -> ApprovalDefine:
         """获取审批定义详情 https://open.feishu.cn/document/server-docs/approval-v4/approval/get"""
-        res = BaseClient().get(f"{cls.api['approval']}/{approval_code}")
+        res = cls.get(f"{cls.api['approval']}/{approval_code}")
         return ApprovalDefine(**res["data"])
 
     def detail(self, open_id: str = ""):

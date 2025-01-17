@@ -46,5 +46,5 @@
 
 继承`feishu.client.BaseClient`。
 
-- `BaseClient`封装了`get`, `post`, `put`, `_request`方法，可以自动鉴权发送HTTP请求。
+- `AuthClient`封装了`get`, `post`, `put`, `_request`方法，可以自动鉴权发送HTTP请求。
 - 属性`api`用于保存各个api的别名和url: `{name: /api, ...}`

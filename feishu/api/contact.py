@@ -1,11 +1,11 @@
 from functools import cached_property
 from typing import Union
 
-from feishu.client import BaseClient
+from feishu.client import AuthClient
 from feishu.config import config
 
 
-class Contact(BaseClient):
+class Contact(AuthClient):
     api = {"user_id": "/contact/v3/users/batch_get_id"}
     _instance = None
     _cache = {}

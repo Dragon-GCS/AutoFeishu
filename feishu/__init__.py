@@ -6,7 +6,17 @@ from .api.approval import Approval
 from .api.contact import Contact
 from .api.messages import FeiShuBot
 from .api.spread_sheet import Sheet, SpreadSheet
-from .client import BaseClient
+from .client import AuthClient, TenantAccessToken, UserAccessToken
 from .config import config
 
-__all__ = ["Approval", "BaseClient", "Contact", "FeiShuBot", "Sheet", "SpreadSheet", "config"]
+__all__ = [
+    "Approval",
+    "AuthClient",
+    "Contact",
+    "FeiShuBot",
+    "Sheet",
+    "SpreadSheet",
+    "UserAccessToken",
+    "TenantAccessToken",
+    "config",
+]

@@ -7,7 +7,7 @@ from typing import Union
 
 from pydantic import BaseModel
 
-from feishu.client import BaseClient
+from feishu.client import AuthClient
 
 
 class WriteResult(BaseModel):
@@ -18,21 +18,25 @@ class WriteResult(BaseModel):
     updatedRows: int
 
 
-class SpreadSheet(BaseClient):
+class SpreadSheet(AuthClient):
     """Operate Feishu SpreadSheet
 
     Args:
         doc_id(str): The document ID of the spreadsheet
     """
 
+    api = {
+        "list": "/sheets/v3/spreadsheets/{doc_id}/sheets/query",
+        "update": "/sheets/v2/spreadsheets/{doc_id}/sheets_batch_update",
+    }
+
     def __init__(self, doc_id: str):
         self.doc_id = doc_id
+        self.api = {name: api.format(doc_id=doc_id) for name, api in self.api.items()}
 
-    def _request(self, method: str, api: str, **kwargs):
-        version = "v3" if api.startswith("/sheets/") else "v2"
-        api = f"/sheets/{version}/spreadsheets/{self.doc_id}{api}"
-        data = super()._request(method, api, **kwargs)
-        return data["data"]
+    @classmethod
+    def _request(cls, method: str, api: str, **kwargs):
+        return super()._request(method, api, **kwargs)["data"]
 
     def list_sheets(self) -> list["Sheet"]:
         """List all sheets in the spreadsheet
@@ -41,7 +45,7 @@ class SpreadSheet(BaseClient):
             list[Sheet]: List of sheet objects
         """
 
-        data = self.get("/sheets/query")
+        data = self.get(self.api["list"])
         return [
             Sheet(owner=self, sheet_id=sheet["sheet_id"], title=sheet["title"])
             for sheet in data["sheets"]
@@ -73,8 +77,7 @@ class SpreadSheet(BaseClient):
         """
 
         data = self.post(
-            "/sheets_batch_update",
-            json={"requests": {"addSheet": {"properties": {"title": title}}}},
+            self.api["update"], json={"requests": {"addSheet": {"properties": {"title": title}}}}
         )
         sheet_id = data["replies"][0]["addSheet"]["properties"]["sheetId"]
         return Sheet(owner=self, sheet_id=sheet_id, title=title)
@@ -86,7 +89,7 @@ class SpreadSheet(BaseClient):
             sheet_id(str): The sheet_id of the sheet to delete
         """
         data = self.post(
-            "/sheets_batch_update", json={"requests": {"deleteSheet": {"sheetId": sheet_id}}}
+            self.api["update"], json={"requests": {"deleteSheet": {"sheetId": sheet_id}}}
         )
         return data["replies"][0]["deleteSheet"]["result"]
 

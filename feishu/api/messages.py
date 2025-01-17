@@ -18,7 +18,7 @@ except ImportError:
     cv2 = None
 
 
-from feishu.client import BaseClient
+from feishu.client import AuthClient
 
 FileStream: TypeAlias = Union[BufferedReader, bytes, bytearray]
 File: TypeAlias = Union[str, FileStream]
@@ -26,7 +26,7 @@ FileType: TypeAlias = Literal["opus", "mp4", "pdf", "doc", "xls", "ppt", "stream
 MsgType: TypeAlias = Literal["text", "image", "audio", "media", "file", "interactive"]
 
 
-class FeiShuBot(BaseClient):
+class FeiShuBot(AuthClient):
     """发送消息给指定用户或聊天群组。
     当 user_id 和 chat_id 未设置时，机器人将使用Contact().default_open_id作为默认收件人。
     当 user_id 和 chat_id 都设置时，将会在群消息中@指定用户。

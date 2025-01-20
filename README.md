@@ -41,10 +41,11 @@
 - `Contact`: 根据手机号或邮箱获取open_id
 - `Message`: 向指定联系人或群发送文本、文件、图片、卡片
 - `SpreadSheet`: 读写多维表格
+- `Group`: 群组管理
 
 ## 新增接口开发
 
 继承`feishu.client.BaseClient`。
 
-- `AuthClient`封装了`get`, `post`, `put`, `_request`方法，可以自动鉴权发送HTTP请求。
+- `AuthClient`封装了`get`, `post`, `put`, `_request`等方法，可以自动鉴权发送HTTP请求。
 - 属性`api`用于保存各个api的别名和url: `{name: /api, ...}`

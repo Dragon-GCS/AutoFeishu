@@ -4,6 +4,7 @@ __version__ = "0.0.5"
 
 from .api.approval import Approval
 from .api.contact import Contact
+from .api.group import Group
 from .api.messages import FeiShuBot
 from .api.spread_sheet import Sheet, SpreadSheet
 from .client import AuthClient, TenantAccessToken, UserAccessToken
@@ -14,6 +15,7 @@ __all__ = [
     "AuthClient",
     "Contact",
     "FeiShuBot",
+    "Group",
     "Sheet",
     "SpreadSheet",
     "UserAccessToken",

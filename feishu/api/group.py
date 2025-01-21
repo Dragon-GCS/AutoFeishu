@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Any, Literal, Optional
 
+from typing_extensions import Self
+
 from feishu.client import AuthClient
 from feishu.models.group import GroupInfo
 from feishu.models.message import Message
@@ -20,7 +22,7 @@ class Group(AuthClient):
         self.info = GroupInfo(**kwargs)
 
     @classmethod
-    def get_groups(cls, query: str = "", num: int = 0):
+    def get_groups(cls, query: str = "", num: int = 0) -> list[Self]:
         api = cls.api["chats"]
         params: dict[str, Any] = {"user_id_type": "open_id"}
         params["page_size"] = min(num, 100) if num > 0 else 100
@@ -76,7 +78,7 @@ class Group(AuthClient):
         ascending: bool = True,
         thread_id: str = "",
         num: int = 0,
-    ):
+    ) -> list[Message]:
         """
         https://open.feishu.cn/document/server-docs/im-v1/message/list
         """
@@ -92,7 +94,6 @@ class Group(AuthClient):
             params["end_time"] = int(end_time.timestamp())
         data = self.get(self.api["message"], params=params)["data"]
         messages = [Message(**item) for item in data["items"]]
-        print(data)
         while data["has_more"] and (num <= 0 or len(messages) < num):
             params["page_token"] = data["page_token"]
             data = self.get(self.api["message"], params=params)["data"]

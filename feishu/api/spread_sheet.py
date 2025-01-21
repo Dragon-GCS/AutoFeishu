@@ -35,7 +35,7 @@ class SpreadSheet(AuthClient):
         self.api = {name: api.format(doc_id=doc_id) for name, api in self.api.items()}
 
     @classmethod
-    def _request(cls, method: str, api: str, **kwargs):
+    def _request(cls, method: str, api: str, **kwargs) -> dict:
         return super()._request(method, api, **kwargs)["data"]
 
     def list_sheets(self) -> list["Sheet"]:

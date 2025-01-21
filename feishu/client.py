@@ -1,11 +1,11 @@
 import atexit
-import json
 from datetime import datetime, timedelta
-from typing import Any, Literal, Optional
+from typing import Any, ClassVar, Literal, Optional
 
 import httpx
 
 from feishu.config import config
+from feishu.errors import ApiError
 
 
 class BaseClient:
@@ -20,17 +20,9 @@ class BaseClient:
     def _request(cls, method: str, api: str, **kwargs) -> dict:
         url = cls.base_url + api
         res = cls._client.request(method, url, **kwargs)
-
-        try:
-            data = res.json()
-        except json.JSONDecodeError:
-            raise Exception(f"Api({api}) request error({res.status_code}): {res.text}")
-
-        if data["code"]:
-            raise Exception(
-                f"Api({api}) response code error，please check the error code({data['code']}): "
-                f"{data.get('msg') or data['error']}"
-            )
+        data = res.json()
+        if code := data["code"]:
+            raise ApiError(api, code, data.get("msg") or data["error"])
         return data
 
     @classmethod
@@ -65,7 +57,11 @@ class BaseClient:
 class Token(BaseClient):
     """Base class for token management"""
 
-    auth_api: str
+    auth_api: ClassVar[str]
+
+    def __init__(self) -> None:
+        self.token = ""
+        self.expire_at = None
 
     def _auth(self, body: dict) -> dict:
         return self.post(self.auth_api, json=body)
@@ -77,6 +73,24 @@ class Token(BaseClient):
             # attribute name should be "token"
             instance.__dict__["token"] = value
 
+    def __get__(self, instance: Optional["AuthClient"], owner: type["AuthClient"]) -> str:
+        if self.is_expired():
+            self.refresh_token()
+        return self.token
+
+    def is_expired(self) -> bool:
+        """Check if the token is expired"""
+        return not (self.token and self.expire_at and self.expire_at > datetime.now())
+
+    def _update_token(self, token: str, expires_in: int) -> None:
+        """Update token and expire time"""
+        self.token = token
+        self.expire_at = timedelta(seconds=expires_in) + datetime.now()
+
+    def refresh_token(self) -> None:
+        """Refresh token, should be implemented by subclass"""
+        raise NotImplementedError
+
 
 class TenantAccessToken(Token):
     """Tenant access token with auto refresh
@@ -87,19 +101,10 @@ class TenantAccessToken(Token):
 
     auth_api = "/auth/v3/tenant_access_token/internal"
 
-    def __init__(self) -> None:
-        self.token = ""
-        self.expire_at = datetime.now()
-
-    def __get__(self, instance: "AuthClient", owner: type["AuthClient"]) -> str:
-        if self.token and self.expire_at > datetime.now():
-            return self.token
-
+    def refresh_token(self) -> None:
         assert config.app_id and config.app_secret, "Please set APP_ID and APP_SECRET"
         auth_data = self._auth({"app_id": config.app_id, "app_secret": config.app_secret})
-        self.token = auth_data["tenant_access_token"]
-        self.expire_at = timedelta(seconds=auth_data["expire"]) + datetime.now()
-        return self.token
+        self._update_token(auth_data["tenant_access_token"], auth_data["expire"])
 
 
 class UserAccessToken(Token):
@@ -122,6 +127,9 @@ class UserAccessToken(Token):
         code_challenge: str = "",
         code_challenge_method: Literal["S256", "plain"] = "plain",
     ):
+        """
+        https://open.feishu.cn/document/common-capabilities/sso/api/obtain-oauth-code
+        """
         from urllib.parse import urlencode
 
         params = {
@@ -135,18 +143,18 @@ class UserAccessToken(Token):
         return f"{config.base_url}/authen/v1/authorize?{urlencode(params)}"
 
     def __init__(self, auth_code: str, redirect_uri: str, code_verify: str = "", scope: str = ""):
+        super().__init__()
         self.auth_code = auth_code
         self.redirect_uri = redirect_uri
         self.scope = scope
         self.code_verify = code_verify
-        self.token = ""
-        self.expire_at = None
 
-    def __get__(self, instance: "AuthClient", owner: type["AuthClient"]) -> str:
-        if self.expire_at is not None and self.expire_at < datetime.now():
+    def refresh_token(self) -> None:
+        """
+        https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/authentication-management/access-token/get-user-access-token
+        """
+        if self.expire_at is not None:
             raise Exception("UserAccessToken is expired")
-        if self.token:
-            return self.token
 
         assert config.app_id and config.app_secret, "Please set APP_ID and APP_SECRET"
         body = {
@@ -155,7 +163,6 @@ class UserAccessToken(Token):
             "client_secret": config.app_secret,
             "code": self.auth_code,
             "redirect_uri": self.redirect_uri,
-            "code_verifier": self.code_verify,
         }
         if self.scope:
             body["scope"] = self.scope
@@ -163,9 +170,7 @@ class UserAccessToken(Token):
             body["code_verifier"] = self.code_verify
 
         auth_data = self._auth(body=body)
-        self.token = auth_data["access_token"]
-        self.expire_at = timedelta(seconds=auth_data["expires_in"]) + datetime.now()
-        return self.token
+        self._update_token(auth_data["access_token"], auth_data["expires_in"])
 
 
 class AuthClient(BaseClient):

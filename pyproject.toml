@@ -20,7 +20,7 @@ dynamic = ['version']
 dependencies = [
     'httpx',
     'pydantic',
-    'pydantic_settings'
+    'pydantic_settings[toml]'
 ]
 
 [[project.authors]]

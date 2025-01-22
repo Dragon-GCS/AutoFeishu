@@ -16,7 +16,7 @@
 
 - 环境变量(case-insensitive): 所有相关环境变量以`FEISHU_`开头，例如`FEISHU_API_KEY`, `FEISHU_API_SECRET`
 
-- `.env`文件(case-insensitive)
+- `.feishu.env`, `.env`文件(case-insensitive)
 - `pyproject.toml`文件(case-sensitive)
 
   ```toml

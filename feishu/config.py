@@ -11,8 +11,9 @@ class Config(BaseSettings):
     model_config = {
         "env_prefix": "FEISHU_",
         "case_sensitive": False,
-        "env_file": ".env",
+        "env_file": (".env", ".feishu.env"),
         "pyproject_toml_table_header": ("tool", "auto-feishu"),
+        "extra": "ignore",
     }
 
     app_id: str = ""

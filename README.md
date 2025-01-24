@@ -48,4 +48,6 @@
 继承`feishu.client.BaseClient`。
 
 - `AuthClient`封装了`get`, `post`, `put`, `_request`等方法，可以自动鉴权发送HTTP请求。
+- `AuthClient`包含一个使用默认`app_id`和`app_secret`的`default_client`, 可以在classmethod中使用
+- `feishu.client.Cache`是一个自动区分当前app的描述器，可以用来缓存数据。样例参见`feishu.contact.Contact`
 - 属性`api`用于保存各个api的别名和url: `{name: /api, ...}`

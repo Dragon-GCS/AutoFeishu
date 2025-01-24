@@ -7,8 +7,7 @@
 import json
 import os
 from io import BufferedReader
-
-from typing_extensions import Literal, TypeAlias, Union
+from typing import Literal, Union
 
 from feishu.api.contact import Contact
 
@@ -20,10 +19,10 @@ except ImportError:
 
 from feishu.client import AuthClient
 
-FileStream: TypeAlias = Union[BufferedReader, bytes, bytearray]
-File: TypeAlias = Union[str, FileStream]
-FileType: TypeAlias = Literal["opus", "mp4", "pdf", "doc", "xls", "ppt", "stream"]
-MsgType: TypeAlias = Literal["text", "image", "audio", "media", "file", "interactive"]
+FileStream = Union[BufferedReader, bytes, bytearray]
+File = Union[str, FileStream]
+FileType = Literal["opus", "mp4", "pdf", "doc", "xls", "ppt", "stream"]
+MsgType = Literal["text", "image", "audio", "media", "file", "interactive"]
 
 
 class FeiShuBot(AuthClient):

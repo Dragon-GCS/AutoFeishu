@@ -1,10 +1,11 @@
 import json
 from datetime import datetime
+from typing import Literal, Optional, Union
 
-from typing_extensions import Literal, Optional, Union
+from typing_extensions import Self
 
 from feishu.client import AuthClient
-from feishu.models.approval import ApprovalDefine, ApprovalDetail
+from feishu.models import ApprovalDefine, ApprovalDetail
 
 
 class Approval(AuthClient):
@@ -39,7 +40,7 @@ class Approval(AuthClient):
         title: Optional[str] = None,
         title_display_method: int = 0,
         auto_approvals: list[dict[Literal["CUSTOM", "NON_CUSTOM"], str]] = [],
-    ) -> "Approval":
+    ) -> Self:
         """创建审批实例 https://open.feishu.cn/document/server-docs/approval-v4/instance/create
 
         Args:
@@ -65,6 +66,8 @@ class Approval(AuthClient):
                 0: 如果都有title，展示approval 和instance的title，竖线分割。
                 1: 如果都有title，只展示instance的title
             auto_approvals (list[dict[str, str]]): 自动通过节点。Key为节点类型(CUSTOM|NON_CUSTOM)，value为节点id。
+        Return:
+            approval (Approval): 审批实例
         """
         body: dict[str, Union[str, int, list]] = {
             "approval_code": approval_code,
@@ -111,7 +114,7 @@ class Approval(AuthClient):
         end_time: Union[int, datetime],
         num: int = 0,
         page_size: int = 100,
-    ):
+    ) -> list[Self]:
         """批量查询审批实例 https://open.feishu.cn/document/server-docs/approval-v4/instance/list
 
         Args:
@@ -120,6 +123,9 @@ class Approval(AuthClient):
             end_time (Union[int, datetime]): 结束时间, 整数毫秒或者 datetime 对象
             num (int, optional): 查询数量。 默认为 0, 表示查询全部.
             page_size (int, optional): 分页大小。默认为 100，最大100。
+
+        Return:
+            approvals (list[Approval]): 审批实例列表
         """
         if isinstance(start_time, datetime):
             start_time = int(start_time.timestamp() * 1000)
@@ -145,15 +151,23 @@ class Approval(AuthClient):
 
     @classmethod
     def get_define(cls, approval_code: str) -> ApprovalDefine:
-        """获取审批定义详情 https://open.feishu.cn/document/server-docs/approval-v4/approval/get"""
+        """获取审批定义详情 https://open.feishu.cn/document/server-docs/approval-v4/approval/get
+
+        Args:
+            approval_code (str): 审批定义code
+        Returns:
+            ApprovalDefine: 审批定义详情
+        """
         res = cls.default_client.get(f"{cls.api['approval']}/{approval_code}")
         return ApprovalDefine(**res["data"])
 
-    def detail(self, open_id: str = ""):
+    def detail(self, open_id: str = "") -> ApprovalDetail:
         """获取审批实例详情 https://open.feishu.cn/document/server-docs/approval-v4/instance/get
 
         Args:
             open_id (str): 可选，发起审批的用户id
+        Return:
+            ApprovalDetail: 审批实例详情
         """
         res = self.get(
             f"{self.api['instance']}/{self.instance_code}",

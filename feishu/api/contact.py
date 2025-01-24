@@ -1,11 +1,16 @@
-from typing import Union
+from typing import Literal, Union
 
 from feishu.client import AuthClient, Cache
 from feishu.config import config
+from feishu.models.user import User
 
 
 class Contact(AuthClient):
-    api = {"user_id": "/contact/v3/users/batch_get_id"}
+    api = {
+        "batch_user_id": "/contact/v3/users/batch_get_id",
+        "user_info": "/contact/v3/users/{user_id}",
+        "batch_user_info": "/contact/v3/users/batch",
+    }
     # 缓存不同app的联系人
     _cache: Cache[dict[str, str]] = Cache(dict)
 
@@ -45,8 +50,6 @@ class Contact(AuthClient):
             cache (bool): 是否缓存查询结果。默认为 True。
         Returns:
             dict[str, str]: 将每个提供的手机号或电子邮件地址到其对应的OpenID的映射。
-        Exceptions:
-            AssertionError: 如果未提供电话号码或电子邮件地址。
         """
 
         assert phones or emails, "User phone or user email must be set to query open_id"
@@ -62,7 +65,7 @@ class Contact(AuthClient):
             return {contact: self._cache[contact] for contact in body["emails"] + body["mobiles"]}
 
         resp = self.post(
-            self.api["user_id"],
+            self.api["batch_user_id"],
             params={"user_id_type": "open_id"},
             json=body,
         )
@@ -74,3 +77,53 @@ class Contact(AuthClient):
         if cache:
             self._cache.update(users)
         return users
+
+    def get_user_info(
+        self,
+        user_id: str,
+        user_id_type: Literal["open_id", "union_id", "user_id"] = "open_id",
+        department_id_type: Literal["department_id", "open_department_id"] = "open_department_id",
+    ) -> User:
+        """获取用户信息
+        https://open.feishu.cn/document/server-docs/contact-v3/user/get
+
+        Args:
+            user_id (str): 用户ID
+            user_id_type (Literal["open_id", "union_id", "user_id"]): 用户ID类型，默认"open_id"。
+            department_id_type (Literal["department_id", "open_department_id"]):
+                部门ID类型，默认"open_department_id"。
+        Returns:
+            user (User): 用户信息
+        """
+        data = self.get(
+            self.api["user_info"].format(user_id=user_id),
+            params={"user_id_type": user_id_type, "department_id_type": department_id_type},
+        )["data"]
+        return User.model_validate(data["user"])
+
+    def batch_user_info(
+        self,
+        user_ids: list[str],
+        user_id_type: Literal["open_id", "union_id", "user_id"] = "open_id",
+        department_id_type: Literal["department_id", "open_department_id"] = "open_department_id",
+    ) -> list[User]:
+        """批量获取用户信息
+        https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/contact-v3/user/batch
+
+        Args:
+            user_ids (list[str]): 用户ID列表
+            user_id_type (Literal["open_id", "union_id", "user_id"]): 用户ID类型，默认"open_id"。
+            department_id_type (Literal["department_id", "open_department_id"]):
+                部门ID类型，默认"open_department_id"。
+        Returns:
+            users (list[User]): 用户信息列表
+        """
+        data = self.get(
+            self.api["batch_user_info"],
+            params={
+                "user_ids": user_ids,
+                "user_id_type": user_id_type,
+                "department_id_type": department_id_type,
+            },
+        )["data"]
+        return [User.model_validate(user) for user in data["items"]]

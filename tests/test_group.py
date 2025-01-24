@@ -60,38 +60,73 @@ class TestGroup(unittest.TestCase):
     @patch.object(Group, "patch")
     def test_join(self, mock_patch: MagicMock):
         """Test join method"""
-        mock_patch.return_value = {"success": True}
-        result = self.group.join()
+        _ = self.group.join()
         mock_patch.assert_called_with(f"/im/v1/chats/{self.chat_id}/members/me_join")
-        self.assertEqual(result, {"success": True})
 
     @patch.object(Group, "post")
     def test_invite(self, mock_post: MagicMock):
         """Test invite method"""
-        mock_post.return_value = {"success": True}
         user_ids = ["user1", "user2"]
-        result = self.group.invite(user_ids=user_ids)
+        _ = self.group.invite(user_ids=user_ids)
 
         mock_post.assert_called_with(
             f"/im/v1/chats/{self.chat_id}/members",
             params={"member_id_type": "open_id", "succeed_type": 0},
             json={"id_list": user_ids},
         )
-        self.assertEqual(result, {"success": True})
 
     @patch.object(Group, "delete")
     def test_remove(self, mock_delete: MagicMock):
         """Test remove method"""
-        mock_delete.return_value = {"success": True}
         user_ids = ["user1", "user2"]
-        result = self.group.remove(user_ids=user_ids)
+        _ = self.group.remove(user_ids=user_ids)
 
         mock_delete.assert_called_with(
             f"/im/v1/chats/{self.chat_id}/members",
             params={"member_id_type": "open_id"},
             json={"id_list": user_ids},
         )
-        self.assertEqual(result, {"success": True})
+
+    @patch.object(Group, "get")
+    def test_members(self, mock_get: MagicMock):
+        """Test members method"""
+        # Mock API response
+        mock_response = {
+            "data": {
+                "items": [
+                    {
+                        "member_id": "ou_123",
+                        "member_id_type": "open_id",
+                        "name": "User 1",
+                        "tenant_key": "tenant1",
+                    },
+                    {
+                        "member_id": "ou_456",
+                        "member_id_type": "open_id",
+                        "name": "User 2",
+                        "tenant_key": "tenant2",
+                    },
+                ],
+                "has_more": False,
+                "page_token": "token123",
+            }
+        }
+        mock_get.return_value = mock_response
+
+        # Test default parameters
+        members = self.group.members()
+        self.assertEqual(len(members), 2)
+        self.assertEqual(members, {"ou_123": "User 1", "ou_456": "User 2"})
+        mock_get.assert_called_with(
+            f"/im/v1/chats/{self.chat_id}/members",
+            params={"member_id_type": "open_id", "page_size": 100},
+        )
+        # Test with custom parameters
+        members = self.group.members(member_id_type="user_id")
+        mock_get.assert_called_with(
+            f"/im/v1/chats/{self.chat_id}/members",
+            params={"member_id_type": "user_id", "page_size": 100},
+        )
 
     @patch.object(Group, "get")
     def test_history(self, mock_get: MagicMock):

@@ -1,25 +1,22 @@
-from functools import cached_property
 from typing import Union
 
-from feishu.client import AuthClient
+from feishu.client import AuthClient, Cache
 from feishu.config import config
 
 
 class Contact(AuthClient):
     api = {"user_id": "/contact/v3/users/batch_get_id"}
-    _instance = None
-    _cache = {}
+    # 缓存不同app的联系人
+    _cache: Cache[dict[str, str]] = Cache(dict)
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+    def __init__(self, app_id: str = "", app_secret: str = ""):
+        super().__init__(app_id, app_secret)
 
-    @cached_property
+    @property
     def default_open_id(self) -> str:
         """通过环境变量获取默认的 open_id。如果设置了`FEISHU_OPEN_ID`，则返回该值。否则，使用`FEISHU_PHONE`或`FEISHU_EMAIL`查询。"""
 
-        if config.open_id:
+        if config.open_id and (self.app_id, self.app_secret) == (config.app_id, config.app_secret):
             return config.open_id
 
         if not config.phone and not config.email:

@@ -38,10 +38,13 @@ class FeiShuBot(AuthClient):
 
     api = {"message": "/im/v1/messages", "images": "/im/v1/images", "files": "/im/v1/files"}
 
-    def __init__(self, user_id: str = "", chat_id: str = ""):
+    def __init__(
+        self, user_id: str = "", chat_id: str = "", app_id: str = "", app_secret: str = ""
+    ):
+        super().__init__(app_id, app_secret)
         self.receive_id = user_id or chat_id
         if not self.receive_id:
-            self.receive_id = Contact().default_open_id
+            self.receive_id = Contact(app_id, app_secret).default_open_id
 
         if self.receive_id.startswith("ou_"):
             self.receive_id_type = "open_id"

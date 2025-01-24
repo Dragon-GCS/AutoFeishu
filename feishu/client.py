@@ -1,6 +1,6 @@
 import atexit
 from datetime import datetime, timedelta
-from typing import Any, ClassVar, Literal, Optional
+from typing import Any, Callable, ClassVar, Generic, Literal, Optional, TypeVar
 
 import httpx
 
@@ -11,57 +11,68 @@ from feishu.errors import ApiError
 class BaseClient:
     """BaseClient for FeiShu API, handle each request."""
 
-    base_url = config.base_url
-    _client = httpx.Client()  # Shared client for all instances
+    _client = httpx.Client(timeout=config.http_timeout)  # Shared client for all instances
 
     atexit.register(_client.close)
 
-    @classmethod
-    def _request(cls, method: str, api: str, **kwargs) -> dict:
-        url = cls.base_url + api
-        res = cls._client.request(method, url, **kwargs)
+    def _request(self, method: str, api: str, **kwargs) -> dict:
+        url = config.base_url + api
+        res = self._client.request(method, url, **kwargs)
         data = res.json()
         if code := data["code"]:
             raise ApiError(api, code, data.get("msg") or data["error"])
         return data
 
-    @classmethod
-    def get(cls, api: str, **kwargs) -> dict:
-        return cls._request("GET", api, **kwargs)
+    def get(self, api: str, **kwargs) -> dict:
+        return self._request("GET", api, **kwargs)
 
-    @classmethod
-    def post(cls, api: str, **kwargs) -> dict:
-        return cls._request("POST", api, **kwargs)
+    def post(self, api: str, **kwargs) -> dict:
+        return self._request("POST", api, **kwargs)
 
-    @classmethod
-    def put(cls, api: str, **kwargs) -> dict:
-        return cls._request("PUT", api, **kwargs)
+    def put(self, api: str, **kwargs) -> dict:
+        return self._request("PUT", api, **kwargs)
 
-    @classmethod
-    def delete(cls, api: str, **kwargs) -> dict:
-        return cls._request("DELETE", api, **kwargs)
+    def delete(self, api: str, **kwargs) -> dict:
+        return self._request("DELETE", api, **kwargs)
 
-    @classmethod
-    def patch(cls, api: str, **kwargs) -> dict:
-        return cls._request("PATCH", api, **kwargs)
+    def patch(self, api: str, **kwargs) -> dict:
+        return self._request("PATCH", api, **kwargs)
 
-    @classmethod
-    def head(cls, api: str, **kwargs) -> dict:
-        return cls._request("HEAD", api, **kwargs)
+    def head(self, api: str, **kwargs) -> dict:
+        return self._request("HEAD", api, **kwargs)
 
-    @classmethod
-    def options(cls, api: str, **kwargs) -> dict:
-        return cls._request("OPTIONS", api, **kwargs)
+    def options(self, api: str, **kwargs) -> dict:
+        return self._request("OPTIONS", api, **kwargs)
+
+
+T = TypeVar("T")
+
+
+class Cache(Generic[T]):
+    def __init__(self, default_factory: Callable[[], T] = dict):
+        self._cache: dict[tuple[str, str], T] = {}
+        self._default_factory = default_factory
+
+    def __set__(self, instance: "AuthClient", value: T):
+        app_id = instance.app_id
+        app_secret = instance.app_secret
+        assert app_id and app_secret, "Please set FEISHU_APP_ID and FEISHU_APP_SECRET"
+        self._cache[(app_id, app_secret)] = value
+
+    def __get__(self, instance: "AuthClient", owner: type["AuthClient"]):
+        app_id = instance.app_id
+        app_secret = instance.app_secret
+        assert app_id and app_secret, "Please set FEISHU_APP_ID and FEISHU_APP_SECRET"
+        key = (app_id, app_secret)
+        return self._cache.setdefault(key, self._default_factory())
 
 
 class Token(BaseClient):
     """Base class for token management"""
 
     auth_api: ClassVar[str]
-
-    def __init__(self) -> None:
-        self.token = ""
-        self.expire_at = None
+    # Store tokens for different apps
+    _tokens: ClassVar[dict[tuple[str, str], tuple[str, datetime]]]
 
     def _auth(self, body: dict) -> dict:
         return self.post(self.auth_api, json=body)
@@ -70,24 +81,26 @@ class Token(BaseClient):
         if not isinstance(value, Token):
             raise AttributeError(f"{self.__class__.__name__} is read-only")
         if instance is not None:
-            # attribute name should be "token"
-            instance.__dict__["token"] = value
+            raise AttributeError("Only support assign new token on class level")
 
-    def __get__(self, instance: Optional["AuthClient"], owner: type["AuthClient"]) -> str:
-        if self.is_expired():
-            self.refresh_token()
-        return self.token
+    def __get__(self, instance: "AuthClient", owner: type["AuthClient"]) -> str:
+        app_id = instance.app_id
+        app_secret = instance.app_secret
+        assert app_id and app_secret, "Please set FEISHU_APP_ID and FEISHU_APP_SECRET"
+        key = (app_id, app_secret)
+        token, expire_at = self._tokens.get(key, (None, None))
+        if not (token and expire_at and expire_at > datetime.now()):
+            self.refresh_token(app_id, app_secret)
+        return self._tokens[key][0]
 
-    def is_expired(self) -> bool:
-        """Check if the token is expired"""
-        return not (self.token and self.expire_at and self.expire_at > datetime.now())
-
-    def _update_token(self, token: str, expires_in: int) -> None:
+    def _update_token(self, app_id: str, app_secret: str, token: str, expires_in: int) -> None:
         """Update token and expire time"""
-        self.token = token
-        self.expire_at = timedelta(seconds=expires_in) + datetime.now()
+        self._tokens[(app_id, app_secret)] = (
+            token,
+            datetime.now() + timedelta(seconds=expires_in),
+        )
 
-    def refresh_token(self) -> None:
+    def refresh_token(self, app_id: str, app_secret: str) -> None:
         """Refresh token, should be implemented by subclass"""
         raise NotImplementedError
 
@@ -100,11 +113,13 @@ class TenantAccessToken(Token):
     """
 
     auth_api = "/auth/v3/tenant_access_token/internal"
+    _tokens = {}
 
-    def refresh_token(self) -> None:
-        assert config.app_id and config.app_secret, "Please set APP_ID and APP_SECRET"
-        auth_data = self._auth({"app_id": config.app_id, "app_secret": config.app_secret})
-        self._update_token(auth_data["tenant_access_token"], auth_data["expire"])
+    def refresh_token(self, app_id: str, app_secret: str) -> None:
+        auth_data = self._auth({"app_id": app_id, "app_secret": app_secret})
+        self._update_token(
+            app_id, app_secret, auth_data["tenant_access_token"], auth_data["expire"]
+        )
 
 
 class UserAccessToken(Token):
@@ -117,6 +132,7 @@ class UserAccessToken(Token):
     """
 
     auth_api = "/authen/v2/oauth/token"
+    _tokens = {}
 
     @classmethod
     def auth_url(
@@ -143,24 +159,23 @@ class UserAccessToken(Token):
         return f"{config.base_url}/authen/v1/authorize?{urlencode(params)}"
 
     def __init__(self, auth_code: str, redirect_uri: str, code_verify: str = "", scope: str = ""):
-        super().__init__()
         self.auth_code = auth_code
         self.redirect_uri = redirect_uri
         self.scope = scope
         self.code_verify = code_verify
 
-    def refresh_token(self) -> None:
+    def refresh_token(self, app_id: str, app_secret: str) -> None:
         """
         https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/authentication-management/access-token/get-user-access-token
         """
-        if self.expire_at is not None:
+        # Execute only on first refresh or when token expired(raise exception if token exists)
+        if self._tokens.get((app_id, app_secret)):
             raise Exception("UserAccessToken is expired")
 
-        assert config.app_id and config.app_secret, "Please set APP_ID and APP_SECRET"
         body = {
             "grant_type": "authorization_code",
-            "client_id": config.app_id,
-            "client_secret": config.app_secret,
+            "client_id": app_id,
+            "client_secret": app_secret,
             "code": self.auth_code,
             "redirect_uri": self.redirect_uri,
         }
@@ -170,16 +185,23 @@ class UserAccessToken(Token):
             body["code_verifier"] = self.code_verify
 
         auth_data = self._auth(body=body)
-        self._update_token(auth_data["access_token"], auth_data["expires_in"])
+        self._update_token(app_id, app_secret, auth_data["access_token"], auth_data["expires_in"])
 
 
 class AuthClient(BaseClient):
     """Client with automatic token management."""
 
-    token: Token = TenantAccessToken()  # Shared token for all instances
+    token = TenantAccessToken()
     api: dict[str, str]
+    default_client: ClassVar["BaseClient"]  # default client with default app_id and app_secret
 
-    @classmethod
-    def _request(cls, method: str, api: str, **kwargs) -> dict:
-        kwargs.setdefault("headers", {})["Authorization"] = f"Bearer {cls.token}"
+    def __init__(self, app_id: str = "", app_secret: str = ""):
+        self.app_id = app_id or config.app_id
+        self.app_secret = app_secret or config.app_secret
+
+    def _request(self, method: str, api: str, **kwargs) -> dict:
+        kwargs.setdefault("headers", {})["Authorization"] = f"Bearer {self.token}"
         return super()._request(method, api, **kwargs)
+
+
+AuthClient.default_client = AuthClient()

@@ -7,3 +7,5 @@ dist/
 build/
 site/
 *.egg-info/
+
+*.env

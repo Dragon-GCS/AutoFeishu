@@ -7,7 +7,8 @@ from feishu import FeiShuBot
 
 
 class TestFeishu(unittest.TestCase):
-    bot = FeiShuBot()
+    def setUp(self) -> None:
+        self.bot = FeiShuBot()
 
     def test_send_text(self):
         self.bot.send_text("This is a test message.")

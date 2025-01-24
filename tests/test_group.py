@@ -26,7 +26,7 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(self.group.api, expected_api)
 
-    @patch.object(Group, "get")
+    @patch.object(Group.default_client, "get")
     def test_get_groups(self, mock_get: MagicMock):
         """Test get_groups method"""
         # Mock API response

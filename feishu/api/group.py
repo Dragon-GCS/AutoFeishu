@@ -16,7 +16,8 @@ class Group(AuthClient):
         "message": "/im/v1/messages",
     }
 
-    def __init__(self, chat_id: str, **kwargs):
+    def __init__(self, chat_id: str, app_id: str = "", app_secret: str = "", **kwargs):
+        super().__init__(app_id, app_secret)
         self.chat_id = chat_id
         self.api = {name: api.format(chat_id=chat_id) for name, api in self.api.items()}
         self.info = GroupInfo(**kwargs)
@@ -29,10 +30,13 @@ class Group(AuthClient):
         if query:
             params["query"] = query
             api += "/search"
-        data = cls.get(api, params=params)["data"]
+        data = cls.default_client.get(api, params=params)["data"]
         groups = [cls(**group) for group in data["items"]]
         while data["has_more"] and (num <= 0 or len(groups) < num):
-            data = cls.get(api, params=params | {"page_token": data["page_token"]})["data"]
+            data = cls.default_client.get(
+                api,
+                params=params | {"page_token": data["page_token"]},
+            )["data"]
             groups.extend([cls(**group) for group in data["items"]])
         return groups[:num] if num > 0 else groups
 

@@ -15,7 +15,10 @@ class Approval(AuthClient):
         "reject_task": "/approval/v4/tasks/reject",
     }
 
-    def __init__(self, approval_code: str, instance_code: str):
+    def __init__(
+        self, approval_code: str, instance_code: str, app_id: str = "", app_secret: str = ""
+    ):
+        super().__init__(app_id, app_secret)
         self.approval_code = approval_code
         self.instance_code = instance_code
 
@@ -96,7 +99,7 @@ class Approval(AuthClient):
                 for k, v in auto_approval.items()
             ]
 
-        res = cls.post(cls.api["instance"], json=body)
+        res = cls.default_client.post(cls.api["instance"], json=body)
         instance_code = res["data"]["instance_code"]
         return cls(approval_code, instance_code)
 
@@ -128,12 +131,12 @@ class Approval(AuthClient):
             "start_time": start_time,
             "end_time": end_time,
         }
-        data = cls.get(cls.api["instance"], params=params)["data"]
+        data = cls.default_client.get(cls.api["instance"], params=params)["data"]
         instance = [cls(approval_code, code) for code in data["instance_code_list"]]
 
         while (not num or len(instance) < num) and data["has_more"]:
             params["page_token"] = data["page_token"]
-            data = cls.get(cls.api["instance"], params=params)["data"]
+            data = cls.default_client.get(cls.api["instance"], params=params)["data"]
             instance.extend([cls(approval_code, code) for code in data["instance_code_list"]])
 
         if num:
@@ -143,7 +146,7 @@ class Approval(AuthClient):
     @classmethod
     def get_define(cls, approval_code: str) -> ApprovalDefine:
         """获取审批定义详情 https://open.feishu.cn/document/server-docs/approval-v4/approval/get"""
-        res = cls.get(f"{cls.api['approval']}/{approval_code}")
+        res = cls.default_client.get(f"{cls.api['approval']}/{approval_code}")
         return ApprovalDefine(**res["data"])
 
     def detail(self, open_id: str = ""):

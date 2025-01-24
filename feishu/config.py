@@ -20,6 +20,7 @@ class Config(BaseSettings):
     app_secret: str = ""
 
     base_url: str = "https://open.feishu.cn/open-apis"
+    http_timeout: int = 30
 
     phone: str = ""
     email: str = ""

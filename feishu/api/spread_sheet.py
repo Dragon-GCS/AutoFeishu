@@ -30,12 +30,12 @@ class SpreadSheet(AuthClient):
         "update": "/sheets/v2/spreadsheets/{doc_id}/sheets_batch_update",
     }
 
-    def __init__(self, doc_id: str):
+    def __init__(self, doc_id: str, app_id: str = "", app_secret: str = ""):
+        super().__init__(app_id, app_secret)
         self.doc_id = doc_id
         self.api = {name: api.format(doc_id=doc_id) for name, api in self.api.items()}
 
-    @classmethod
-    def _request(cls, method: str, api: str, **kwargs) -> dict:
+    def _request(self, method: str, api: str, **kwargs) -> dict:
         return super()._request(method, api, **kwargs)["data"]
 
     def list_sheets(self) -> list["Sheet"]:

@@ -1,8 +1,8 @@
 import json
 from datetime import datetime
+from typing import Literal
 
-from pydantic import AliasPath, BaseModel, BeforeValidator, Field
-from typing import Annotated, Literal
+from pydantic import AliasPath, BaseModel, Field, ValidationInfo, field_validator
 
 
 class MessageSender(BaseModel):
@@ -17,7 +17,7 @@ class MessageMention(BaseModel):
     id: str
     id_type: Literal["open_id"]
     name: str
-    tenant_key: str
+    tenant_key: str = ""
 
 
 class Message(BaseModel):
@@ -36,8 +36,14 @@ class Message(BaseModel):
     deleted: bool
     chat_id: str
     sender: MessageSender
-    body: Annotated[dict, BeforeValidator(json.loads)] = Field(
-        validation_alias=AliasPath("body", "content")
-    )
+    body: dict = Field(validation_alias=AliasPath("body", "content"))
     mentions: list[MessageMention] = Field(default_factory=list)
     upper_message_id: str = ""
+
+    @field_validator("body", mode="before")
+    @classmethod
+    def parse_body(cls, v: str, info: ValidationInfo) -> dict:
+        try:
+            return json.loads(v)
+        except json.JSONDecodeError:
+            return {info.data["msg_type"]: v}

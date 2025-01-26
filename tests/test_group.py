@@ -194,7 +194,7 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(len(messages), 2)
         self.assertIsInstance(messages[0], Message)
         self.assertEqual(messages[0].message_id, "msg1")
-        self.assertEqual(messages[0].body["text"], "Hello World")
+        self.assertEqual(messages[0].body.content["text"], "Hello World")
         self.assertEqual(len(messages[0].mentions), 1)
         self.assertEqual(messages[0].mentions[0].id, "user1")
 
@@ -217,7 +217,7 @@ class TestGroup(unittest.TestCase):
 
         self.assertIsInstance(messages[0], Message)
         self.assertEqual(messages[1].message_id, "msg2")
-        self.assertEqual(messages[1].body["text"], "Hello Again")
+        self.assertEqual(messages[1].body.content["text"], "Hello Again")
         self.assertEqual(len(messages[1].mentions), 0)
 
         mock_get.assert_called_with(

@@ -2,14 +2,14 @@ import json
 from datetime import datetime
 from typing import Literal
 
-from pydantic import AliasPath, BaseModel, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class MessageSender(BaseModel):
     id: str
     id_type: Literal["open_id", "app_id", ""]
     sender_type: Literal["user", "system", "app", "anonymous", "unknown", ""]
-    tenant_key: str
+    tenant_key: str = ""
 
 
 class MessageMention(BaseModel):
@@ -18,6 +18,20 @@ class MessageMention(BaseModel):
     id_type: Literal["open_id"]
     name: str
     tenant_key: str = ""
+
+
+class MessageBody(BaseModel):
+    content: dict
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def parse_body(cls, v: str, info: ValidationInfo) -> dict:
+        if isinstance(v, dict):
+            return v
+        try:
+            return json.loads(v)
+        except json.JSONDecodeError:
+            return {info.data["msg_type"]: v}
 
 
 class Message(BaseModel):
@@ -36,14 +50,6 @@ class Message(BaseModel):
     deleted: bool
     chat_id: str
     sender: MessageSender
-    body: dict = Field(validation_alias=AliasPath("body", "content"))
+    body: MessageBody
     mentions: list[MessageMention] = Field(default_factory=list)
     upper_message_id: str = ""
-
-    @field_validator("body", mode="before")
-    @classmethod
-    def parse_body(cls, v: str, info: ValidationInfo) -> dict:
-        try:
-            return json.loads(v)
-        except json.JSONDecodeError:
-            return {info.data["msg_type"]: v}

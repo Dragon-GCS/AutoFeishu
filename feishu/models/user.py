@@ -15,10 +15,10 @@ class User(BaseModel):
     en_name: str
     mobile_visible: bool
     name: str
-    nickname: str
     open_id: str
     union_id: str
 
+    nickname: str = ""
     user_id: str = ""
     email: str = ""
     mobile: str = ""

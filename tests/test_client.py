@@ -86,6 +86,70 @@ class TestAuthClient(unittest.TestCase):
         self.assertEqual(token1, token2)
         mock_auth.assert_called_once()
 
+    @patch.object(UserAccessToken, "_lock")
+    @patch.object(UserAccessToken, "_auth")
+    @patch.object(TenantAccessToken, "_auth")
+    def test_token_context_manager(
+        self, mock_tenant_auth: MagicMock, mock_user_auth: MagicMock, mock_lock: MagicMock
+    ):
+        """Test token context manager behavior"""
+        # Setup initial token
+        user_token = UserAccessToken("test_code", "http://test.com/callback")
+
+        mock_tenant_auth.return_value = self.mock_token_response("default_token")
+        mock_user_auth.return_value = {
+            "code": 0,
+            "access_token": "user_token",
+            "expires_in": 7200,
+        }
+
+        # Get initial token
+        initial_token = self.client1.token
+        self.assertEqual(initial_token, "default_token")
+
+        # Use context manager to temporarily switch token
+        with user_token.change(AuthClient):
+            # Verify lock was acquired
+            mock_lock.__enter__.assert_called_once()
+
+            # Verify token was switched
+            current_token = self.client1.token
+            self.assertEqual(current_token, "user_token")
+        # Verify token was restored after context
+        restored_token = self.client1.token
+        self.assertEqual(restored_token, "default_token")
+        mock_lock.__exit__.assert_called_once()
+
+    @patch.object(UserAccessToken, "_lock")
+    @patch.object(UserAccessToken, "_auth")
+    @patch.object(TenantAccessToken, "_auth")
+    def test_token_context_manager_with_exception(
+        self, mock_tenant_auth: MagicMock, mock_user_auth: MagicMock, mock_lock: MagicMock
+    ):
+        """Test token context manager handles exceptions properly"""
+        user_token = UserAccessToken("test_code", "http://test.com/callback")
+
+        mock_tenant_auth.return_value = self.mock_token_response("default_token")
+        mock_user_auth.return_value = {
+            "code": 0,
+            "access_token": "user_token",
+            "expires_in": 7200,
+        }
+
+        try:
+            with user_token.change(AuthClient):
+                raise ValueError("Test exception")
+        except ValueError:
+            pass
+
+        # Verify token was restored even after exception
+        restored_token = self.client1.token
+        self.assertEqual(restored_token, "default_token")
+
+        # Verify lock was released
+        mock_lock.__enter__.assert_called_once()
+        mock_lock.__exit__.assert_called_once()
+
 
 class TestUserAccessToken(unittest.TestCase):
     """Test UserAccessToken functionality"""

@@ -1,5 +1,7 @@
 import atexit
+from contextlib import contextmanager
 from datetime import datetime, timedelta
+from threading import Lock
 from typing import Any, Callable, ClassVar, Generic, Literal, Optional, TypeVar
 
 import httpx
@@ -73,6 +75,8 @@ class Token(BaseClient):
     auth_api: ClassVar[str]
     # Store tokens for different apps
     _tokens: ClassVar[dict[tuple[str, str], tuple[str, datetime]]]
+    # Thread lock
+    _lock = Lock()
 
     def _auth(self, body: dict) -> dict:
         return self.post(self.auth_api, json=body)
@@ -84,6 +88,8 @@ class Token(BaseClient):
             raise AttributeError("Only support assign new token on class level")
 
     def __get__(self, instance: "AuthClient", owner: type["AuthClient"]) -> str:
+        if owner is None:
+            raise ValueError("Access token with class is not allowed")
         app_id = instance.app_id
         app_secret = instance.app_secret
         assert app_id and app_secret, "Please set FEISHU_APP_ID and FEISHU_APP_SECRET"
@@ -103,6 +109,25 @@ class Token(BaseClient):
     def refresh_token(self, app_id: str, app_secret: str) -> None:
         """Refresh token, should be implemented by subclass"""
         raise NotImplementedError
+
+    @contextmanager
+    def change(self, client: type["AuthClient"]):
+        """Temporarily change the token with the current instance's token,
+        and save the original token. Used to use different authentication tokens
+        in specific code blocks.
+
+        Args:
+            client (type[AuthClient]): Client to change token, default is AuthClient
+        """
+        if "token" not in client.__dict__:
+            raise ValueError("Only type AuthClient can be changed")
+        _origin_token = client.__dict__["token"]
+        with self._lock:
+            try:
+                client.token = self
+                yield self
+            finally:
+                client.token = _origin_token
 
 
 class TenantAccessToken(Token):
@@ -191,9 +216,9 @@ class UserAccessToken(Token):
 class AuthClient(BaseClient):
     """Client with automatic token management."""
 
-    token = TenantAccessToken()
+    token: ClassVar[Token] = TenantAccessToken()
     api: dict[str, str]
-    default_client: ClassVar["BaseClient"]  # default client with default app_id and app_secret
+    default_client: ClassVar["AuthClient"]  # default client with default app_id and app_secret
 
     def __init__(self, app_id: str = "", app_secret: str = ""):
         self.app_id = app_id or config.app_id
@@ -203,5 +228,8 @@ class AuthClient(BaseClient):
         kwargs.setdefault("headers", {})["Authorization"] = f"Bearer {self.token}"
         return super()._request(method, api, **kwargs)
 
-
-AuthClient.default_client = AuthClient()
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        if not hasattr(AuthClient, "default_client"):
+            AuthClient.default_client = AuthClient()
+        cls.default_client = AuthClient.default_client

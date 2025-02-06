@@ -221,6 +221,9 @@ class AuthClient(BaseClient):
     default_client: ClassVar["AuthClient"]  # default client with default app_id and app_secret
 
     def __init__(self, app_id: str = "", app_secret: str = ""):
+        if hasattr(self, "default_client"):
+            app_id = app_id or self.default_client.app_id
+            app_secret = app_secret or self.default_client.app_secret
         self.app_id = app_id or config.app_id
         self.app_secret = app_secret or config.app_secret
 

@@ -171,7 +171,7 @@ class TestGroup(unittest.TestCase):
                         "msg_type": "text",
                         "create_time": "1672578000000",
                         "update_time": "1672578000000",
-                        "deleted": False,
+                        "deleted": True,
                         "chat_id": "chat2",
                         "sender": {
                             "id": "sender2",
@@ -179,7 +179,7 @@ class TestGroup(unittest.TestCase):
                             "sender_type": "user",
                             "tenant_key": "key2",
                         },
-                        "body": {"content": '{"text": "Hello Again"}'},
+                        "body": {"content": "This message was recalled"},
                         "mentions": [],
                         "upper_message_id": "upper2",
                     },
@@ -217,7 +217,7 @@ class TestGroup(unittest.TestCase):
 
         self.assertIsInstance(messages[0], Message)
         self.assertEqual(messages[1].message_id, "msg2")
-        self.assertEqual(messages[1].body.content["text"], "Hello Again")
+        self.assertEqual(messages[1].body.content, {"raw": "This message was recalled"})
         self.assertEqual(len(messages[1].mentions), 0)
 
         mock_get.assert_called_with(

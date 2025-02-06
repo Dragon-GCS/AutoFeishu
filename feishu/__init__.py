@@ -1,6 +1,6 @@
 # API Reference: https://open.feishu.cn/document/server-docs/api-call-guide/calling-process/overview
 
-__version__ = "0.0.14"
+__version__ = "0.0.15"
 
 from .api.approval import Approval
 from .api.contact import Contact

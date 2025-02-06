@@ -31,7 +31,7 @@ class MessageBody(BaseModel):
         try:
             return json.loads(v)
         except json.JSONDecodeError:
-            return {info.data["msg_type"]: v}
+            return {"raw": v}
 
 
 class Message(BaseModel):
